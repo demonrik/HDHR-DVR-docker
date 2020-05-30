@@ -19,4 +19,4 @@ VOLUME ["/dvrrec", "/dvrdata"]
 EXPOSE 59090
 
 # And setup to run by default
-ENTRYPOINT ["/HDHomeRunDVR/hdhomerun.sh"]
+ENTRYPOINT ["/bin/sh","/HDHomeRunDVR/hdhomerun.sh"]
