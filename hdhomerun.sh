@@ -40,7 +40,8 @@ create_hdhr_user()
 		echo "Checking $PGID exists" >> ${HDHR_LOG}
 		if grep -Fq ':$PGID:' /etc/group ; then
 			echo "Nope... creating Group" >> ${HDHR_LOG}
-			addgroup -g $PGID hdhr
+			delgroup $HDHR_GRP
+			addgroup -g $PGID $HDHR_GRP
 		else
 			echo "Yep... Using existing group" >> ${HDHR_LOG}
 			HDHR_GRP=`grep -F ':$PGID:' /etc/group | cut -d: -f1`
@@ -49,6 +50,7 @@ create_hdhr_user()
 		echo "Checking $PUID exists" >> ${HDHR_LOG}
 		if grep -Fq ':$PUID:' /etc/passwd ; then
 			echo "Nope... creating User " >> ${HDHR_LOG}
+			deluser $HDHR_USER
 			adduser -HDG $HDHR_GRP -u $PUID $HDHR_USER
 		else
 			echo "Yep... Using existing User" >> ${HDHR_LOG}
