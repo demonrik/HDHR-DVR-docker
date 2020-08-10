@@ -5,7 +5,7 @@
 # To update the record engine, simply stop the container, and restart
 
 # Base Image to use
-FROM alpine:3.11.6
+FROM alpine:latest
 
 # Build up new image
 COPY install.sh /
