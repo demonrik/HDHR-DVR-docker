@@ -27,8 +27,9 @@ HDHR_LOG=${DVRData}/HDHomeRunDVR.log
 #
 create_hdhr_user()
 {
-	CURR_USR=$(id -u)
-	if [ ! "$CURR_USR" eq "0"] ; then
+	CURR_USER=`id -u`
+	echo "Current User is $CURR_USER" >> ${HDHR_LOG}
+	if [ "$CURR_USER" == "0" ] ; then
 		echo "Creating HDHR User" >> ${HDHR_LOG}
 		if [ -z "$PGID" ] ; then
 			PGID=1000
@@ -38,8 +39,8 @@ create_hdhr_user()
 		fi
 
 		echo "Checking $PGID exists" >> ${HDHR_LOG}
-		if grep -Fq ':$PGID:' /etc/group ; then
-			echo "Nope... creating Group" >> ${HDHR_LOG}
+		if ! grep -qF ":$PGID:" /etc/group ; then
+			echo "Nope... creating Group $HDHR_GRP with ID $PGID" >> ${HDHR_LOG}
 			delgroup $HDHR_GRP
 			addgroup -g $PGID $HDHR_GRP
 		else
@@ -48,8 +49,8 @@ create_hdhr_user()
 		fi
 
 		echo "Checking $PUID exists" >> ${HDHR_LOG}
-		if grep -Fq ':$PUID:' /etc/passwd ; then
-			echo "Nope... creating User " >> ${HDHR_LOG}
+		if ! grep -qF ":$PUID:" /etc/passwd ; then
+			echo "Nope... creating User $HDHR_USER with ID $PUID in Group $HDHR_GRP " >> ${HDHR_LOG}
 			deluser $HDHR_USER
 			adduser -HDG $HDHR_GRP -u $PUID $HDHR_USER
 		else
@@ -57,7 +58,7 @@ create_hdhr_user()
 			HDHR_USER=`grep -F ':$PUID:' /etc/passwd | cut -d: -f1`
 		fi
 	else
-		echo "Running as non root user! Assume using -user on docker, skipping setup of user..." >> ${HDHR_LOG}
+		echo "Running as non root user $CURR_USER ! Assume using -user on docker, skipping setup of user..." >> ${HDHR_LOG}
 	fi
 }
 
@@ -147,7 +148,8 @@ update_engine()
 start_engine()
 {
 	echo "** Starting the DVR Engine as user $HDHR_USER" >> ${HDHR_LOG}
-	su ${HDHR_USER} -c "${DVRData}/${DVRBin} foreground --conf ${DVRData}/${DVRConf} >> ${HDHR_LOG} 2>&1"
+#	su ${HDHR_USER} -c 
+	${DVRData}/${DVRBin} foreground --conf ${DVRData}/${DVRConf} >> ${HDHR_LOG} 2>&1
 }
 
 ###########################

@@ -6,7 +6,8 @@
 
 # Install working wget which preserves server timestamp
 apk update
-apk install wget
+apk add wget
+apk add grep 
 
 # Create default user and group
 addgroup -g 1000 hdhr
