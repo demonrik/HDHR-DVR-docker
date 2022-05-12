@@ -1,9 +1,5 @@
 FROM alpine:latest
-WORKDIR /var/www/html
-
-# Create default user and group
-RUN addgroup -g 1000 dvr
-RUN adduser -HDG dvr -u 1000 dvr
+WORKDIR /
 
 # Basics
 RUN echo "UTC" > /etc/timezone
@@ -46,7 +42,6 @@ RUN rm -f /etc/nginx/http.d/default.conf
 #Copy the UI
 RUN mkdir -p /var/www/html/dvrui
 COPY ui/ /var/www/html/dvrui/
-RUN chown -R dvr:dvr /var/www/html/dvrui
 
 # Create working directory
 RUN mkdir -p /HDHomeRunDVR
@@ -56,10 +51,16 @@ RUN mkdir /dvrdata
 RUN mkdir /dvrrec
 RUN ln -s /dvrdata /HDHomeRunDVR/data
 RUN ln -s /dvrrec /HDHomeRunDVR/recordings
+
+# Create default user and group & patch up permissions
+RUN addgroup -g 1000 dvr
+RUN adduser -HDG dvr -u 1000 dvr
+RUN chown -R dvr:dvr /var/lib/nginx
+RUN chown -R dvr:dvr /var/www/html/dvrui
 RUN chown dvr:dvr /HDHomeRunDVR/data
 RUN chown dvr:dvr /HDHomeRunDVR/recordings
 
-
+# Create the execution Environment
 COPY scripts/hdhomerun.sh /HDHomeRunDVR
 COPY scripts/supervisord.sh /HDHomeRunDVR
 RUN chmod u+x /HDHomeRunDVR/hdhomerun.sh
