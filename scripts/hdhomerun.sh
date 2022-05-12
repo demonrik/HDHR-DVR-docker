@@ -2,13 +2,13 @@
 ###########################
 # hdhomerun.sh
 # Shell Script to prepare the container data and execute the record engine
-# Version 1.1
+# Version 1.2
 #  
 
 # Parameters - make sure these match the DockerFile
 HDHR_HOME=/HDHomeRunDVR
-HDHR_USER=hdhr
-HDHR_GRP=hdhr
+HDHR_USER=dvr
+HDHR_GRP=dvr
 DVRData=${HDHR_HOME}/data
 DVRRec=${HDHR_HOME}/recordings
 DefaultPort=59090
@@ -20,48 +20,7 @@ BetaURL=https://download.silicondust.com/hdhomerun/hdhomerun_record_linux_beta
 # Some additional params you can change
 DVRConf=dvr.conf
 DVRBin=hdhomerun_record
-HDHR_LOG=${DVRData}/HDHomeRunDVR.log
-
-###########################
-# Create hdhr user to run the DVR as - default to 1000:1000
-#
-create_hdhr_user()
-{
-	CURR_USER=`id -u`
-	echo "Current User is $CURR_USER" >> ${HDHR_LOG}
-	if [ "$CURR_USER" == "0" ] ; then
-		echo "Creating HDHR User" >> ${HDHR_LOG}
-		if [ -z "$PGID" ] ; then
-			PGID=1000
-		fi
-		if [ -z "$PUID" ] ; then
-			PUID=1000
-		fi
-
-		echo "Checking $PGID exists" >> ${HDHR_LOG}
-		if ! grep -qF ":$PGID:" /etc/group ; then
-			echo "Nope... creating Group $HDHR_GRP with ID $PGID" >> ${HDHR_LOG}
-			delgroup $HDHR_GRP
-			addgroup -g $PGID $HDHR_GRP
-		else
-			echo "Yep... Using existing group" >> ${HDHR_LOG}
-			HDHR_GRP=`grep -F ':$PGID:' /etc/group | cut -d: -f1`
-		fi
-
-		echo "Checking $PUID exists" >> ${HDHR_LOG}
-		if ! grep -qF ":$PUID:" /etc/passwd ; then
-			echo "Nope... creating User $HDHR_USER with ID $PUID in Group $HDHR_GRP " >> ${HDHR_LOG}
-			deluser $HDHR_USER
-			adduser -HDG $HDHR_GRP -u $PUID $HDHR_USER
-		else
-			echo "Yep... Using existing User" >> ${HDHR_LOG}
-			HDHR_USER=`grep -F ':$PUID:' /etc/passwd | cut -d: -f1`
-		fi
-	else
-		echo "Running as non root user $CURR_USER ! Assume using -user on docker, skipping setup of user..." >> ${HDHR_LOG}
-	fi
-}
-
+DVR_PFX="DVRMgr: "
 
 ###########################
 # Creates the initial config file for the engine 8in /HDHomeRunDVR/data
@@ -73,12 +32,13 @@ create_hdhr_user()
 #
 create_initial_config()
 {
-	echo "** Creating Initial Config File" >> ${HDHR_LOG}
+	echo ${DVR_PFX} "** Creating Initial Config File"
 	touch  ${DVRData}/${DVRConf}
 	echo "RecordPath=${DVRRec}" >> ${DVRData}/${DVRConf}
 	echo "Port=${DefaultPort}" >> ${DVRData}/${DVRConf}
 	echo "RecordStreamsMax=16" >>  ${DVRData}/${DVRConf}
 	echo "BetaEngine=1" >>  ${DVRData}/${DVRConf}
+	chown ${HDHR_USER}:${HDHR_GRP} ${DVRData}/${DVRConf}
 }
 
 ###########################
@@ -88,15 +48,15 @@ create_initial_config()
 #
 validate_config_file()
 {
-	echo "** Validating the Config File is available and set up correctly" >> ${HDHR_LOG}
+	echo ${DVR_PFX} "** Validating the Config File is available and set up correctly"
 	if [[ -e ${DVRData}/${DVRConf} ]] ; then
-		echo "Config File exists and is writable - is record path and port correct"  >> ${HDHR_LOG}
+		echo ${DVR_PFX} "Config File exists and is writable - is record path and port correct"
 		.  ${DVRData}/${DVRConf}
 		# TODO: Validate RecordPath
 		# TODO: Validate Port
 	else
 		# config file is missing
-		echo "Config is missing - creating initial version" >> ${HDHR_LOG}
+		echo ${DVR_PFX} "Config is missing - creating initial version"
 		create_initial_config
 	fi
 }
@@ -108,38 +68,46 @@ validate_config_file()
 #
 update_engine()
 {
-	echo "** Installing the HDHomeRunDVR Record Engine"  >> ${HDHR_LOG}
-	echo "Lets remove any existing engine - we're going to take the latest always.... " >> ${HDHR_LOG}
+	echo ${DVR_PFX} "** Installing the HDHomeRunDVR Record Engine"
+	echo ${DVR_PFX} "Lets remove any existing engine - we're going to take the latest always.... "
 	rm -f  ${DVRData}/${DVRBin}
-	echo "Checking it was deleted - if we can't remove it we can't update" >>  ${HDHR_LOG}
+	echo ${DVR_PFX} "Checking it was deleted - if we can't remove it we can't update"
 	# TODO: check file was deleted - warn if not
 	# TODO: check Beta download is enabled on config file, and only download if enabled
-	echo "Downloading latest release" >> ${HDHR_LOG}
+	echo ${DVR_PFX} "Downloading latest release"
 	wget -qO ${DVRData}/${DVRBin}_rel ${DownloadURL}
 	if [ "$BetaEngine" -eq "1" ]; then
-		echo "Downloading latest beta" >> ${HDHR_LOG}
+		echo ${DVR_PFX} "Downloading latest beta"
 		wget -qO ${DVRData}/${DVRBin}_beta ${BetaURL}
-		echo "Comparing which is newest" >>  ${HDHR_LOG}
+		echo ${DVR_PFX} "Comparing which is newest"
 		if [[ ${DVRData}/${DVRBin}_rel -nt  ${DVRData}/${DVRBin}_beta ]] ; then
-			echo "Release version is newer - selecting as record engine" >> ${HDHR_LOG}
+			echo ${DVR_PFX} "Release version is newer - selecting as record engine"
 			mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
 			rm ${DVRData}/${DVRBin}_beta
 			chmod u+x ${DVRData}/${DVRBin}
+			chown ${HDHR_USER}:${HDHR_GRP} ${DVRData}/${DVRBin}
 		elif [[ ${DVRData}/${DVRBin}_rel -ot  ${DVRData}/${DVRBin}_beta ]]; then
-			echo "Beta version is newer - selecting as record engine" >> ${HDHR_LOG}
+			echo ${DVR_PFX} "Beta version is newer - selecting as record engine"
 			mv ${DVRData}/${DVRBin}_beta ${DVRData}/${DVRBin}
 			rm ${DVRData}/${DVRBin}_rel
 			chmod u+x ${DVRData}/${DVRBin}
+			chown ${HDHR_USER}:${HDHR_GRP} ${DVRData}/${DVRBin}
 		else
-			echo "Both versions are same - using the Release version" >> ${HDHR_LOG}
+			echo ${DVR_PFX} "Both versions are same - using the Release version"
 			mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
 			rm ${DVRData}/${DVRBin}_beta
 			chmod u+x ${DVRData}/${DVRBin}
+			chown ${HDHR_USER}:${HDHR_GRP} ${DVRData}/${DVRBin}
 		fi
+	else
+		echo ${DVR_PFX} "Not using Beta Versions - defaulting to Release Version"
+		mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
+		chmod u+x ${DVRData}/${DVRBin}
+		chown ${HDHR_USER}:${HDHR_GRP} ${DVRData}/${DVRBin}
 	fi
 
-	EngineVer=`sh ${DVRData}/${DVRBin}  version | awk 'NR==1{print $4}'`
-	echo "Engine Updated to... " ${EngineVer} >>  ${HDHR_LOG}
+	EngineVer=`sh ${DVRData}/${DVRBin} version | awk 'NR==1{print $4}'`
+	echo ${DVR_PFX} "Engine Updated to... " ${EngineVer}
 }
 
 ###########################
@@ -147,9 +115,8 @@ update_engine()
 #
 start_engine()
 {
-	echo "** Starting the DVR Engine as user $HDHR_USER" >> ${HDHR_LOG}
-#	su ${HDHR_USER} -c 
-	${DVRData}/${DVRBin} foreground --conf ${DVRData}/${DVRConf} >> ${HDHR_LOG} 2>&1
+	echo ${DVR_PFX} "** Starting the DVR Engine as user $HDHR_USER"
+	su ${HDHR_USER} -c "${DVRData}/${DVRBin} foreground --conf ${DVRData}/${DVRConf}"
 }
 
 ###########################
@@ -157,6 +124,5 @@ start_engine()
 #
 validate_config_file
 update_engine
-create_hdhr_user
 start_engine
 
