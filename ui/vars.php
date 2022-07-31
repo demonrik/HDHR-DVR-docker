@@ -1,7 +1,7 @@
 <?php
 final class DVRUI_Vars 
 {
-	const DVRUI_version	="2.0.2";
+	const DVRUI_version	="2.1.0";
 	const DVRUI_name    ="HDHomeRun DVR Manager";
 	const DVRUI_author	="Rik Dunphy";
 	const DVRUI_email   ="rik.dunphy@gmail.com";

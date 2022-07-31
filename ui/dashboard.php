@@ -70,11 +70,6 @@
 			$htmlStr = str_replace('<!-- dvrui_config_storage_value -->', $serverParamEntry, $htmlStr);
 
 			$serverParamEntry = file_get_contents('style/dashboard_ctrls_entry_wr.html');
-			$serverParamEntry = str_replace('<!-- dvrui_param_name -->', 'RunAs', $serverParamEntry);
-			$serverParamEntry = str_replace('<!-- dvrui_param_value -->', $serverConfig->getRunAs(), $serverParamEntry);
-			$htmlStr = str_replace('<!-- dvrui_config_runas -->', $serverParamEntry, $htmlStr);
-
-			$serverParamEntry = file_get_contents('style/dashboard_ctrls_entry_wr.html');
 			$serverParamEntry = str_replace('<!-- dvrui_param_name -->', 'BetaEngine', $serverParamEntry);
 			$serverParamEntry = str_replace('<!-- dvrui_param_value -->', $serverConfig->getBetaEngine(), $serverParamEntry);
 			$htmlStr = str_replace('<!-- dvrui_config_beta -->', $serverParamEntry, $htmlStr);
