@@ -22,6 +22,7 @@ NGINX_ETC=/etc/nginx
 CMD_LN=/bin/ln
 CMD_CP=/bin/cp
 CMD_MKDIR=/bin/mkdir
+CMD_CHOWN=/bin/chown
 CMD_SED=/bin/sed
 CMD_ADDUSER=/usr/sbin/adduser
 CMD_ADDGROUP=/usr/sbin/addgroup
@@ -180,12 +181,14 @@ update_php_user() {
     if [ $? -eq 0 ] ; then
         echo "INFO: user with UID [${PUID}] exists, updating php config"
         ${CMD_SED} -i "s/user = nobody/user = ${DVR_USR}/" ${PHP_WWW_CONF}
+        ${CMD_SED} -i "s/listen.owner = nobody/listen.owner = ${DVR_USR}/" ${PHP_WWW_CONF}
         ${CMD_GETENT} group ${PGID} > /dev/null
         if [ $? -ne 0 ] ; then
             echo "WARN: group with GID [${PGID}] doesn't exists, using default"
         else
             echo "INFO: group with GID [${PGID}] exists, updating php config"
             ${CMD_SED} -i "s/group = nobody/group = ${DVR_USR}/" ${PHP_WWW_CONF}
+            ${CMD_SED} -i "s/listen.group = nobody/listen.group = ${DVR_USR}/" ${PHP_WWW_CONF}
         fi
     else
         echo "WARN: user with PID [${PUID}] not found, using default"
@@ -196,6 +199,11 @@ fix_permissions() {
     # Need to make sure we have the right permissions to the files needed.
     # and flag if the specified user doesn't have full access to the recordings
     echo "INFO: Attempting to Fixing Permissions"
+    ${CMD_GETENT} passwd ${PUID} > /dev/null
+    if [ $? -eq 0 ] ; then
+        ${CMD_CHOWN} -R dvr:dvr /var/lib/nginx
+        ${CMD_CHOWN} -R dvr:dvr /var/www/html/dvrui
+    fi
 }
 
 # Check we have valid configuration - and create/patch up files if missing

@@ -43,6 +43,7 @@ RUN rm -f /etc/nginx/http.d/default.conf
 #Copy the UI
 RUN mkdir -p /var/www/html/dvrui
 COPY ui/ /var/www/html/dvrui/
+RUN chown -R nginx:nginx /var/www/html/dvrui
 
 # Create volume mount points
 RUN mkdir /dvrdata
@@ -54,7 +55,6 @@ RUN ln -s /dvrrec /HDHomeRunDVR/recordings
 #RUN addgroup -g 1000 dvr
 #RUN adduser -HDG dvr -u 1000 dvr
 #RUN chown -R dvr:dvr /var/lib/nginx
-#RUN chown -R dvr:dvr /var/www/html/dvrui
 #RUN chown -R dvr:dvr /HDHomeRunDVR/data
 #RUN chown -R dvr:dvr /HDHomeRunDVR/recordings
 
