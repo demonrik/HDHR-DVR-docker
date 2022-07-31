@@ -181,14 +181,14 @@ update_php_user() {
     if [ $? -eq 0 ] ; then
         echo "INFO: user with UID [${PUID}] exists, updating php config"
         ${CMD_SED} -i "s/user = nobody/user = ${DVR_USR}/" ${PHP_WWW_CONF}
-        ${CMD_SED} -i "s/listen.owner = nobody/listen.owner = ${DVR_USR}/" ${PHP_WWW_CONF}
+        ${CMD_SED} -i "s/listen.nginx = nobody/listen.owner = ${DVR_USR}/" ${PHP_WWW_CONF}
         ${CMD_GETENT} group ${PGID} > /dev/null
         if [ $? -ne 0 ] ; then
             echo "WARN: group with GID [${PGID}] doesn't exists, using default"
         else
             echo "INFO: group with GID [${PGID}] exists, updating php config"
             ${CMD_SED} -i "s/group = nobody/group = ${DVR_USR}/" ${PHP_WWW_CONF}
-            ${CMD_SED} -i "s/listen.group = nobody/listen.group = ${DVR_USR}/" ${PHP_WWW_CONF}
+            ${CMD_SED} -i "s/listen.group = nginx/listen.group = ${DVR_USR}/" ${PHP_WWW_CONF}
         fi
     else
         echo "WARN: user with PID [${PUID}] not found, using default"
@@ -243,10 +243,12 @@ start_supervisord() {
 }
 
 # Main Loop
+CNTR_VER=`cat /HDHomeRunDVR/VERSION`
 echo ""
 echo "************************************************"
 echo ""
 echo "           Starting DVR Container"
+echo "           VERSION: ${CNTR_VER}"
 echo ""
 echo "************************************************"
 echo ""

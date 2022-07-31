@@ -64,6 +64,9 @@ COPY scripts/supervisord.sh /HDHomeRunDVR
 RUN chmod u+x /HDHomeRunDVR/hdhomerun.sh
 RUN chmod 755 /HDHomeRunDVR/supervisord.sh
 
+# Make sure we add VERSION
+COPY VERSION /HDHomeRunDVR/VERSION
+
 # Set Volumes to be added
 VOLUME ["/dvrrec", "/dvrdata"]
 
