@@ -2,11 +2,13 @@
 Docker Wrapper for SiliconDust's HDHomeRun DVR Record Engine
 
 Image based no Alpine Linux https://alpinelinux.org/
+At this time the Ajax framework used is limited to PHP7 and thus the image will stick with Alpine 3.15 as 3.16 moves to PHP8 and removes PHP7
 
-Contains a script to download the latest engine when the engine is started.  
+This container image built does not contain a binary of the silicondust record engine. It is assumed since the user has the ability to download the docker image then they have internet capability to get the latest engine - and thus the image contains a script to download the latest engine when the engine is started. Besides, you need internet for the DVR anyway.
 To update the engine stop the container and then start it again and it will get the latest.
+Note - at this time the nginx and php configurations will be restored to defaults. 
 
-Is important for HDHomeRun system to have everything on the same Network.  
+Is important for HDHomeRun system to have everything on the same Network to scan for tuners, etc.
 thus run the container with the host network selected, i.e.
 ```
 --network host
@@ -36,7 +38,6 @@ Yes it would be useful to maintain the Storage UUID in the dvr.conf, but is safe
 | DVRUI_PORT | Override the default port of 80 for the embedded NGINX Server |
 | PUID | Override the default user ID for the DVR |
 | PGID | Override the default group ID for the DVR |
-
 
 ## Docker Run Example
 ```
