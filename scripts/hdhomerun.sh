@@ -95,8 +95,23 @@ update_engine()
 		mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
 	fi
 	chmod u+rwx ${DVRData}/${DVRBin}
-	EngineVer=`sh ${DVRData}/${DVRBin} version | awk 'NR==1{print $4}'`
+	EngineVer=`${DVRData}/${DVRBin} version | awk 'NR==1{print $4}'`
 	echo ${DVR_PFX} "Engine Updated to... " ${EngineVer}
+}
+
+###########################
+# Patch Permissions to the dvr user
+#
+patch_permissions()
+{
+	echo ${DVR_PFX} "** Checking for PUID"
+	/usr/bin/getent passwd ${PUID} > /dev/null
+    if [ $? -eq 0 ] ; then
+		echo ${DVR_PFX} "** PUID user exists - adjusting permissions to dvrdata & dvrrec"
+		chown -R dvr:dvr /dvrdata /dvrrec
+	else
+		echo ${DVR_PFX} "** Something went wrong - PUID provided, but no user created. using default"
+	fi
 }
 
 ###########################
@@ -105,7 +120,19 @@ update_engine()
 start_engine()
 {
 	echo ${DVR_PFX} "** Starting the DVR Engine"
-	${DVRData}/${DVRBin} foreground --conf ${DVRData}/${DVRConf}
+    if [ ! -z "${PUID}" ] || [ ! -z "${PGID}"] ; then
+		patch_permissions
+		/usr/bin/getent passwd ${PUID} > /dev/null
+	    if [ $? -eq 0 ] ; then
+			echo ${DVR_PFX} "** Executing DVR engine with PUID info..."
+			su -c "${DVRData}/${DVRBin} foreground --conf ${DVRData}/${DVRConf}" dvr
+		else
+			echo ${DVR_PFX} "** Something went wrong - PUID provided, but no user created. using default"
+			${DVRData}/${DVRBin} foreground --conf ${DVRData}/${DVRConf}
+		fi
+	else
+		${DVRData}/${DVRBin} foreground --conf ${DVRData}/${DVRConf}
+	fi
 }
 
 ###########################

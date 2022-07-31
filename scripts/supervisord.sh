@@ -15,6 +15,19 @@ DVR_GRP=dvr
 PHP_ETC=/etc/php7
 NGINX_ETC=/etc/nginx
 
+################
+#
+# Commands Used
+#
+CMD_LN=/bin/ln
+CMD_CP=/bin/cp
+CMD_MKDIR=/bin/mkdir
+CMD_SED=/bin/sed
+CMD_ADDUSER=/usr/sbin/adduser
+CMD_ADDGROUP=/usr/sbin/addgroup
+CMD_GETENT=/usr/bin/getent
+
+
 ##################
 #
 # worker functions for various tasks
@@ -23,7 +36,7 @@ NGINX_ETC=/etc/nginx
 validate_links() {
     if [ ! -d "/HDHomeRunDVR/data" ] ; then
         echo "INFO: DVR data folder doesn't exist, mapping to ${CONF_DIR}"
-        ln -s ${CONF_DIR} /HDHomeRunDVR/data
+        ${CMD_LN} -s ${CONF_DIR} /HDHomeRunDVR/data
     else
         # Location exists - but is it correct...
         echo "INFO: DVR data folder exists already"
@@ -43,7 +56,7 @@ validate_links() {
 
     if [ ! -d "/HDHomeRunDVR/recordings" ] ; then
         echo "INFO: Record recordings folder doesn't exist, mapping to ${REC_DIR}"
-        ln -s ${REC_DIR} /HDHomeRunDVR/recordings
+        ${CMD_LN} -s ${REC_DIR} /HDHomeRunDVR/recordings
     else
         # Location exists - but is it correct...
         echo "INFO: DVR recordings folder exists already"
@@ -82,8 +95,8 @@ validate_nginx() {
         echo "INFO: NGINX DVR Server config file is missing, pulling from defaults..."
         cp ${DEFAULTS_DIR}/nginx-dvrui.conf ${CONF_DIR_NGINX}/nginx-dvrui.conf
     fi
-    ln -fs ${CONF_DIR_NGINX}/nginx.conf ${NGINX_ETC}/nginx.conf
-    ln -fs ${CONF_DIR_NGINX}/nginx-dvrui.conf ${NGINX_ETC}/modules/nginx-dvrui.conf
+    ${CMD_LN} -fs ${CONF_DIR_NGINX}/nginx.conf ${NGINX_ETC}/nginx.conf
+    ${CMD_LN} -fs ${CONF_DIR_NGINX}/nginx-dvrui.conf ${NGINX_ETC}/modules/nginx-dvrui.conf
 }
 
 validate_php() {
@@ -103,9 +116,9 @@ validate_php() {
         echo "INFO: PHP ini file is missing, pulling from defaults..."
         cp ${DEFAULTS_DIR}/php.ini-rel ${CONF_DIR_PHP}/php.ini
     fi
-    /bin/ln -fs ${CONF_DIR_PHP}/php-fpm.conf ${PHP_ETC}/php-fpm.conf
-    /bin/ln -fs ${CONF_DIR_PHP}/www.conf ${PHP_ETC}/php-fpm.d/www.conf
-    /bin/ln -fs ${CONF_DIR_PHP}/php.ini ${PHP_ETC}/php.ini
+    ${CMD_LN} -fs ${CONF_DIR_PHP}/php-fpm.conf ${PHP_ETC}/php-fpm.conf
+    ${CMD_LN} -fs ${CONF_DIR_PHP}/www.conf ${PHP_ETC}/php-fpm.d/www.conf
+    ${CMD_LN} -fs ${CONF_DIR_PHP}/php.ini ${PHP_ETC}/php.ini
 }
 
 create_dvr_user() {
@@ -115,12 +128,12 @@ create_dvr_user() {
     realgrp=${currgrp}
     echo "INFO: From ${curruser}:${currgrp} to ${PUID}:${PGID}"
 
-    /usr/bin/getent group ${PGID}
+    ${CMD_GETENT} group ${PGID} > /dev/null
     if [ $? -eq 0 ]; then
         echo "ERROR: GID specified in PUID [${PGID}] already exists - please specify a valid GID - skipping"
     else
         echo "INFO: Creating Group dvr with GID [${PGID}]"
-        /usr/sbin/addgroup -g ${PGID} ${DVR_GRP}
+        ${CMD_ADDGROUP} -g ${PGID} ${DVR_GRP}
         if [ $? -ne 0 ]; then
             echo "ERROR: Creating group with GID [${PGID}] FAILED - sticking with ${currgrp}"
         else
@@ -129,11 +142,12 @@ create_dvr_user() {
         fi
     fi
 
-    /usr/bin/getent passwd ${PUID}
+    ${CMD_GETENT} passwd ${PUID} > /dev/null
     if [ $? -eq 0 ]; then
         echo "ERROR: UID specified in PUID [${PUID}] already exists - please specify a valid UID - skipping"
     else
-        /usr/sbin/adduser -HDG $realgrp -u ${PUID} ${DVR_USR}
+        echo "INFO: Creating User dvr with UID [${PUID}]"
+        ${CMD_ADDUSER} -HDG $realgrp -u ${PUID} ${DVR_USR}
         if [ $? -ne 0 ]; then
             echo "ERROR: Creating user with UID [${PUID}] FAILED"
         else
@@ -144,16 +158,16 @@ create_dvr_user() {
 
 update_nginx_user() {
     echo "INFO: Updating Nginx User"
-    /usr/bin/getent passwd ${PUID}
-    if [ $? -eq 0] ; then
+    ${CMD_GETENT} passwd ${PUID} > /dev/null
+    if [ $? -eq 0 ] ; then
         echo "INFO: user with UID [${PUID}] exists, checking GID..."
-        /usr/bin/getent group ${PGID}
-        if [ $? -ne 0] ; then
+        ${CMD_GETENT} group ${PGID} > /dev/null
+        if [ $? -ne 0 ] ; then
             echo "WARN: group with GID [${PGID}] doesn't exists, using root and updating Nginx config"
-            /sbin/sed -i "s!\(\"user nginx\").*!\1\"user ${DVR_USER} root\";!" ${NGINX_CONF}
+            ${CMD_SED} -i "s/user nginx/user ${DVR_USR} root/" ${NGINX_CONF}
         else
             echo "INFO: group with GID [${PGID}] exists, updating NGinx config"
-            /sbin/sed -i "s!\(\"user nginx\"\).*!\1\"user ${DVR_USER} ${DVR_GRP}\";!" ${NGINX_CONF}
+            ${CMD_SED} -i "s/user nginx/user ${DVR_USR} ${DVR_GRP}/" ${NGINX_CONF}
         fi
     else
         echo "WARN: user with PID [${PUID}] not found, using default"
@@ -162,16 +176,16 @@ update_nginx_user() {
 
 update_php_user() {
     echo "INFO: Updating PHP User"
-    /usr/bin/getent passwd ${PUID}
-    if [ $? -eq 0] ; then
+    ${CMD_GETENT} passwd ${PUID} > /dev/null
+    if [ $? -eq 0 ] ; then
         echo "INFO: user with UID [${PUID}] exists, updating php config"
-        /sbin/sed -i "s!\(\"user = nobody\").*!\1\"user = ${DVR_USER}\";!" ${PHP_WWW_CONF}
-        /usr/bin/getent group ${PGID}
-        if [ $? -ne 0] ; then
+        ${CMD_SED} -i "s/user = nobody/user = ${DVR_USR}/" ${PHP_WWW_CONF}
+        ${CMD_GETENT} group ${PGID} > /dev/null
+        if [ $? -ne 0 ] ; then
             echo "WARN: group with GID [${PGID}] doesn't exists, using default"
         else
             echo "INFO: group with GID [${PGID}] exists, updating php config"
-            /sbin/sed -i "s!\(\"group = nobody\").*!\1\"group = ${DVR_USER}\";!" ${PHP_WWW_CONF}
+            ${CMD_SED} -i "s/group = nobody/group = ${DVR_USR}/" ${PHP_WWW_CONF}
         fi
     else
         echo "WARN: user with PID [${PUID}] not found, using default"
@@ -207,7 +221,7 @@ update_user() {
 update_nginx_port() {
     if [[ ! -z "${DVRUI_PORT}" ]] ; then
         echo "INFO: Updating the NGINX Port for UI to ${DVRUI_PORT}"
-        sed -i "s|listen 80 default_server|listen ${DVRUI_PORT} default_server|g" ${NGINX_SRV_CONF}
+        ${CMD_SED} -i "s|listen 80 default_server|listen ${DVRUI_PORT} default_server|g" ${NGINX_SRV_CONF}
     else
         echo "WARN: NGINX Port for the UI will default to 80"
         echo "  please set DVRUI_PORT to free port number if you need to run something else on 80"
