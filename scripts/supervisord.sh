@@ -7,9 +7,11 @@ CONF_DIR=/dvrdata
 CONF_DIR_DVR=${CONF_DIR}/dvr
 CONF_DIR_NGINX=${CONF_DIR}/http
 CONF_DIR_PHP=${CONF_DIR}/php
+NGINX_CONF=${CONF_DIR_NGINX}/nginx.conf
 NGINX_SRV_CONF=${CONF_DIR_NGINX}/nginx-dvrui.conf
-CURR_USER=`id -un`
-CURR_GROUP=`id -gn`
+PHP_WWW_CONF=${CONF_DIR_PHP}/www.conf
+DVR_USR=dvr
+DVR_GRP=dvr
 PHP_ETC=/etc/php7
 NGINX_ETC=/etc/nginx
 
@@ -101,27 +103,78 @@ validate_php() {
         echo "INFO: PHP ini file is missing, pulling from defaults..."
         cp ${DEFAULTS_DIR}/php.ini-rel ${CONF_DIR_PHP}/php.ini
     fi
-    ln -fs ${CONF_DIR_PHP}/php-fpm.conf ${PHP_ETC}/php-fpm.conf
-    ln -fs ${CONF_DIR_PHP}/www.conf ${PHP_ETC}/php-fpm.d/www.conf
-    ln -fs ${CONF_DIR_PHP}/php.ini ${PHP_ETC}/php.ini
+    /bin/ln -fs ${CONF_DIR_PHP}/php-fpm.conf ${PHP_ETC}/php-fpm.conf
+    /bin/ln -fs ${CONF_DIR_PHP}/www.conf ${PHP_ETC}/php-fpm.d/www.conf
+    /bin/ln -fs ${CONF_DIR_PHP}/php.ini ${PHP_ETC}/php.ini
 }
 
 create_dvr_user() {
-    echo "INFO: Creating requested User mapping"
-    # usermod -u $PUID dvr
-    # groupmod -g $PGID dvr
+    echo "INFO: Attempting requested User mapping"
+    curruser=`/usr/bin/id -un`
+    currgrp=`/usr/bin/id -gn`
+    realgrp=${currgrp}
+    echo "INFO: From ${curruser}:${currgrp} to ${PUID}:${PGID}"
 
+    /usr/bin/getent group ${PGID}
+    if [ $? -eq 0 ]; then
+        echo "ERROR: GID specified in PUID [${PGID}] already exists - please specify a valid GID - skipping"
+    else
+        echo "INFO: Creating Group dvr with GID [${PGID}]"
+        /usr/sbin/addgroup -g ${PGID} ${DVR_GRP}
+        if [ $? -ne 0 ]; then
+            echo "ERROR: Creating group with GID [${PGID}] FAILED - sticking with ${currgrp}"
+        else
+            echo "INFO: Success"
+            realgrp=${DVR_GRP}
+        fi
+    fi
+
+    /usr/bin/getent passwd ${PUID}
+    if [ $? -eq 0 ]; then
+        echo "ERROR: UID specified in PUID [${PUID}] already exists - please specify a valid UID - skipping"
+    else
+        /usr/sbin/adduser -HDG $realgrp -u ${PUID} ${DVR_USR}
+        if [ $? -ne 0 ]; then
+            echo "ERROR: Creating user with UID [${PUID}] FAILED"
+        else
+            echo "INFO: Success"
+        fi
+    fi
 }
 
 update_nginx_user() {
-    if [[ ! -z "${DVRUI_PORT}" ]] ; then
-        sed -i "s!\(listen\s*default_server\).*!\1\"${DVRUI_PORT}\";!" ${NGINX_SRV_CONF}
+    echo "INFO: Updating Nginx User"
+    /usr/bin/getent passwd ${PUID}
+    if [ $? -eq 0] ; then
+        echo "INFO: user with UID [${PUID}] exists, checking GID..."
+        /usr/bin/getent group ${PGID}
+        if [ $? -ne 0] ; then
+            echo "WARN: group with GID [${PGID}] doesn't exists, using root and updating Nginx config"
+            /sbin/sed -i "s!\(\"user nginx\").*!\1\"user ${DVR_USER} root\";!" ${NGINX_CONF}
+        else
+            echo "INFO: group with GID [${PGID}] exists, updating NGinx config"
+            /sbin/sed -i "s!\(\"user nginx\"\).*!\1\"user ${DVR_USER} ${DVR_GRP}\";!" ${NGINX_CONF}
+        fi
+    else
+        echo "WARN: user with PID [${PUID}] not found, using default"
     fi
 }
 
 update_php_user() {
-    if [[ ! -z "${DVRUI_PORT}" ]] ; then
-        sed -i "s!\(listen\s*default_server\).*!\1\"${DVRUI_PORT}\";!" ${NGINX_SRV_CONF}
+    echo "INFO: Updating PHP User"
+    /usr/bin/getent passwd ${PUID}
+    if [ $? -eq 0] ; then
+        echo "INFO: user with UID [${PUID}] exists, updating php config"
+        /sbin/sed -i "s!\(\"user = nobody\").*!\1\"user = ${DVR_USER}\";!" ${PHP_WWW_CONF}
+        /usr/bin/getent group ${PGID}
+        if [ $? -ne 0] ; then
+            echo "WARN: group with GID [${PGID}] doesn't exists, using default"
+        else
+            echo "INFO: group with GID [${PGID}] exists, updating php config"
+            /sbin/sed -i "s!\(\"group = nobody\").*!\1\"group = ${DVR_USER}\";!" ${PHP_WWW_CONF}
+        fi
+    else
+        echo "WARN: user with PID [${PUID}] not found, using default"
     fi
 }
 
@@ -177,7 +230,7 @@ echo "************************************************"
 echo ""
 
 validate_config
-# update_user
+update_user
 update_nginx_port
 start_supervisord
 

@@ -7,8 +7,6 @@
 
 # Parameters - make sure these match the DockerFile
 HDHR_HOME=/HDHomeRunDVR
-HDHR_USER=dvr
-HDHR_GRP=dvr
 DVRData=${HDHR_HOME}/data
 DVRRec=${HDHR_HOME}/recordings
 DefaultPort=59090
@@ -38,7 +36,6 @@ create_initial_config()
 	echo "Port=${DefaultPort}" >> ${DVRData}/${DVRConf}
 	echo "RecordStreamsMax=16" >>  ${DVRData}/${DVRConf}
 	echo "BetaEngine=1" >>  ${DVRData}/${DVRConf}
-	chown ${HDHR_USER}:${HDHR_GRP} ${DVRData}/${DVRConf}
 }
 
 ###########################
@@ -84,28 +81,20 @@ update_engine()
 			echo ${DVR_PFX} "Release version is newer - selecting as record engine"
 			mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
 			rm ${DVRData}/${DVRBin}_beta
-			chmod u+x ${DVRData}/${DVRBin}
-			chown ${HDHR_USER}:${HDHR_GRP} ${DVRData}/${DVRBin}
 		elif [[ ${DVRData}/${DVRBin}_rel -ot  ${DVRData}/${DVRBin}_beta ]]; then
 			echo ${DVR_PFX} "Beta version is newer - selecting as record engine"
 			mv ${DVRData}/${DVRBin}_beta ${DVRData}/${DVRBin}
 			rm ${DVRData}/${DVRBin}_rel
-			chmod u+x ${DVRData}/${DVRBin}
-			chown ${HDHR_USER}:${HDHR_GRP} ${DVRData}/${DVRBin}
 		else
 			echo ${DVR_PFX} "Both versions are same - using the Release version"
 			mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
 			rm ${DVRData}/${DVRBin}_beta
-			chmod u+x ${DVRData}/${DVRBin}
-			chown ${HDHR_USER}:${HDHR_GRP} ${DVRData}/${DVRBin}
 		fi
 	else
 		echo ${DVR_PFX} "Not using Beta Versions - defaulting to Release Version"
 		mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
-		chmod u+x ${DVRData}/${DVRBin}
-		chown ${HDHR_USER}:${HDHR_GRP} ${DVRData}/${DVRBin}
 	fi
-
+	chmod u+rwx ${DVRData}/${DVRBin}
 	EngineVer=`sh ${DVRData}/${DVRBin} version | awk 'NR==1{print $4}'`
 	echo ${DVR_PFX} "Engine Updated to... " ${EngineVer}
 }
@@ -115,8 +104,8 @@ update_engine()
 #
 start_engine()
 {
-	echo ${DVR_PFX} "** Starting the DVR Engine as user $HDHR_USER"
-	su ${HDHR_USER} -c "${DVRData}/${DVRBin} foreground --conf ${DVRData}/${DVRConf}"
+	echo ${DVR_PFX} "** Starting the DVR Engine"
+	${DVRData}/${DVRBin} foreground --conf ${DVRData}/${DVRConf}
 }
 
 ###########################
