@@ -24,8 +24,8 @@ CMD_CP=/bin/cp
 CMD_MKDIR=/bin/mkdir
 CMD_CHOWN=/bin/chown
 CMD_SED=/bin/sed
-CMD_ADDUSER=/usr/sbin/adduser
-CMD_ADDGROUP=/usr/sbin/addgroup
+CMD_ADDUSER=/usr/sbin/useradd
+CMD_ADDGROUP=/usr/sbin/groupadd
 CMD_GETENT=/usr/bin/getent
 
 
@@ -126,34 +126,29 @@ create_dvr_user() {
     echo "INFO: Attempting requested User mapping"
     curruser=`/usr/bin/id -un`
     currgrp=`/usr/bin/id -gn`
-    realgrp=${currgrp}
     echo "INFO: From ${curruser}:${currgrp} to ${PUID}:${PGID}"
+    realgrp=${currgrp}
 
-    ${CMD_GETENT} group ${PGID} > /dev/null
-    if [ $? -eq 0 ]; then
-        echo "ERROR: GID specified in PUID [${PGID}] already exists - please specify a valid GID - skipping"
+
+    echo "INFO: Creating Group dvr with GID [${PGID}]"
+    ${CMD_ADDGROUP} -og ${PGID} ${DVR_GRP}
+    resp = $?
+    if [ $resp -ne 0 ]; then
+        echo "WARN: Creating group with GID [${PGID}] FAILED - sticking with ${currgrp}"
+        echo "INFO: Response was" $resp
+        cat /etc/group
     else
-        echo "INFO: Creating Group dvr with GID [${PGID}]"
-        ${CMD_ADDGROUP} -g ${PGID} ${DVR_GRP}
-        if [ $? -ne 0 ]; then
-            echo "ERROR: Creating group with GID [${PGID}] FAILED - sticking with ${currgrp}"
-        else
-            echo "INFO: Success"
-            realgrp=${DVR_GRP}
-        fi
+        echo "INFO: Success"
+        realgrp=${DVR_GRP}
     fi
 
-    ${CMD_GETENT} passwd ${PUID} > /dev/null
-    if [ $? -eq 0 ]; then
-        echo "ERROR: UID specified in PUID [${PUID}] already exists - please specify a valid UID - skipping"
+    echo "INFO: Creating User dvr with UID [${PUID}]"
+    ${CMD_ADDUSER} -Mg $realgrp -ou ${PUID} ${DVR_USR}
+    resp = $?
+    if [ $resp -ne 0 ]; then
+        echo "ERROR: Creating user with UID [${PUID}] FAILED"
     else
-        echo "INFO: Creating User dvr with UID [${PUID}]"
-        ${CMD_ADDUSER} -HDG $realgrp -u ${PUID} ${DVR_USR}
-        if [ $? -ne 0 ]; then
-            echo "ERROR: Creating user with UID [${PUID}] FAILED"
-        else
-            echo "INFO: Success"
-        fi
+        echo "INFO: Success"
     fi
 }
 

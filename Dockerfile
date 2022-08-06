@@ -51,13 +51,6 @@ RUN mkdir /dvrrec
 RUN ln -s /dvrdata /HDHomeRunDVR/data
 RUN ln -s /dvrrec /HDHomeRunDVR/recordings
 
-# Create default user and group & patch up permissions
-#RUN addgroup -g 1000 dvr
-#RUN adduser -HDG dvr -u 1000 dvr
-#RUN chown -R dvr:dvr /var/lib/nginx
-#RUN chown -R dvr:dvr /HDHomeRunDVR/data
-#RUN chown -R dvr:dvr /HDHomeRunDVR/recordings
-
 # Create the execution Environment
 COPY scripts/hdhomerun.sh /HDHomeRunDVR
 COPY scripts/supervisord.sh /HDHomeRunDVR
