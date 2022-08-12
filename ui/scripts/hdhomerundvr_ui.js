@@ -74,8 +74,7 @@ function updateServer() {
 	var port = document.getElementById('Port').value;
 	var path = document.getElementById('RecordPath').value;
 	var streams = document.getElementById('RecordStreamsMax').value;
-	var runas = document.getElementById('RunAs').value;
 	var beta = document.getElementById('BetaEngine').value;
-	updateServerConfig(port, path, streams, runas, beta);
+	updateServerConfig(port, path, streams, beta);
 }
 

@@ -219,7 +219,7 @@
 		return $tab->getString();
 	}
 
-	function updateServerConfig($port,$path,$streams,$runas,$beta) {
+	function updateServerConfig($port,$path,$streams,$beta) {
 		// prep
 		ob_start();
 		$tab = new TinyAjaxBehavior();
@@ -227,13 +227,10 @@
 		//create output
 		$serverConfig = new DVRUI_Engine_Config();
 
-		error_log('Updating Config File: '. $port . ' | ' . $streams . ' | ' . $path . ' | ' . $runas . ' | ' . $beta);
+		error_log('Updating Config File: '. $port . ' | ' . $streams . ' | ' . $path . ' | ' . $beta);
 		$serverConfig->setRecordPath($path);
 		$serverConfig->setRecordStreamsMax($streams);
 		$serverConfig->setServerPort($port);
-		if ($runas != 'not set') {
-			$serverConfig->setRunAs($runas);
-		}
 		$serverConfig->setBetaEngine($beta);
 		$serverConfig->writeConfigFile();
 	
