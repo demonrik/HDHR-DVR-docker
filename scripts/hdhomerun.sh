@@ -66,34 +66,47 @@ validate_config_file()
 update_engine()
 {
 	echo ${DVR_PFX} "** Installing the HDHomeRunDVR Record Engine"
-	echo ${DVR_PFX} "Lets remove any existing engine - we're going to take the latest always.... "
-	rm -f  ${DVRData}/${DVRBin}
-	echo ${DVR_PFX} "Checking it was deleted - if we can't remove it we can't update"
-	# TODO: check file was deleted - warn if not
-	# TODO: check Beta download is enabled on config file, and only download if enabled
-	echo ${DVR_PFX} "Downloading latest release"
+	curEngineVer=`${DVRData}/${DVRBin} version | awk 'NR==1{print $4}'`
+	stableEngineVer=""
+	betaEngineVer=""
+	echo ${DVR_PFX} "** Current Engine Version is $curEngineVer"
+	gotStableDVR = false
+	gotBetaDVR = false
+
+	echo ${DVR_PFX} "Downloading latest Stable release"
 	wget -qO ${DVRData}/${DVRBin}_rel ${DownloadURL}
-	if [ "$BetaEngine" -eq "1" ]; then
-		echo ${DVR_PFX} "Downloading latest beta"
-		wget -qO ${DVRData}/${DVRBin}_beta ${BetaURL}
-		echo ${DVR_PFX} "Comparing which is newest"
-		if [[ ${DVRData}/${DVRBin}_rel -nt  ${DVRData}/${DVRBin}_beta ]] ; then
-			echo ${DVR_PFX} "Release version is newer - selecting as record engine"
-			mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
-			rm ${DVRData}/${DVRBin}_beta
-		elif [[ ${DVRData}/${DVRBin}_rel -ot  ${DVRData}/${DVRBin}_beta ]]; then
-			echo ${DVR_PFX} "Beta version is newer - selecting as record engine"
-			mv ${DVRData}/${DVRBin}_beta ${DVRData}/${DVRBin}
-			rm ${DVRData}/${DVRBin}_rel
-		else
-			echo ${DVR_PFX} "Both versions are same - using the Release version"
-			mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
-			rm ${DVRData}/${DVRBin}_beta
-		fi
+	if [ $# -ne 0 ] ; then
+		echo ${DVR_PFX} "ERROR in downloading latest Stable DVR binary [$#]"
 	else
-		echo ${DVR_PFX} "Not using Beta Versions - defaulting to Release Version"
+		stableEngineVer=`${DVRData}/${DVRBin}_rel version | awk 'NR==1{print $4}'`
+		gotStableDVR = true
+	fi
+
+	if [ "$BetaEngine" -eq "1" ]; then
+		echo ${DVR_PFX} "Downloading latest Beta release"
+		wget -qO ${DVRData}/${DVRBin}_beta ${DownloadURL}
+		if [ $# -ne 0 ] ; then
+			echo ${DVR_PFX} "ERROR in downloading latest Beta DVR binary [$#]"
+		else
+			betaEngineVer=`${DVRData}/${DVRBin}_beta version | awk 'NR==1{print $4}'`
+			gotBetaDVR = true
+		fi
+	fi
+
+	if [ "$gotStableDVR" = false ] && [ "$gotBetaDVR" = false ]; then
+		echo ${DVR_PFX} "ERROR have no downloaded engines - leaving the existing binary [$curEngineVer] alone!"
+		return 
+	elif [ "$gotBetaDVR" = true ] ; then
+		echo ${DVR_PFX} "Beta version downloaded - will use this engine [$betaEngineVer]"
+		rm -f  ${DVRData}/${DVRBin}
+		mv ${DVRData}/${DVRBin}_beta ${DVRData}/${DVRBin}
+	else # gotStableDVR = true && gotBetaDVR = false
+		echo ${DVR_PFX} "Stable version downloaded - will use this engine [$stableEngineVer]"
+		rm -f  ${DVRData}/${DVRBin}
 		mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
 	fi
+	rm ${DVRData}/${DVRBin}_beta
+	rm ${DVRData}/${DVRBin}_rel
 	chmod u+rwx ${DVRData}/${DVRBin}
 	EngineVer=`${DVRData}/${DVRBin} version | awk 'NR==1{print $4}'`
 	echo ${DVR_PFX} "Engine Updated to... " ${EngineVer}
