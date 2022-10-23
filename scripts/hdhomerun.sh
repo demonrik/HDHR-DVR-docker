@@ -67,9 +67,19 @@ update_engine()
 {
 	echo ${DVR_PFX} "** Installing the HDHomeRunDVR Record Engine"
 	curEngineVer=`${DVRData}/${DVRBin} version | awk 'NR==1{print $4}'`
+	if [ ${#curEngineVer} -gt 8 ] ; then
+		curIsBeta = true
+		curBeta = ${curEngineVer:12:1}
+		curEngineDate = ${curEngineVer%b*}
+	else
+		curIsBeta = false
+		curBeta = 0
+		curEngineDate = ${curEngineVer}
+	fi
+
+	echo ${DVR_PFX} "** Current Engine Version is ${curEngineVer}"
 	stableEngineVer=""
 	betaEngineVer=""
-	echo ${DVR_PFX} "** Current Engine Version is $curEngineVer"
 	gotStableDVR = false
 	gotBetaDVR = false
 
@@ -89,6 +99,8 @@ update_engine()
 			echo ${DVR_PFX} "ERROR in downloading latest Beta DVR binary [$#]"
 		else
 			betaEngineVer=`${DVRData}/${DVRBin}_beta version | awk 'NR==1{print $4}'`
+			betaBeta = ${betaEngineVer:12:1}
+			betaEngineDate = ${betaEngineVer%b*}
 			gotBetaDVR = true
 		fi
 	fi
@@ -97,13 +109,27 @@ update_engine()
 		echo ${DVR_PFX} "ERROR have no downloaded engines - leaving the existing binary [$curEngineVer] alone!"
 		return 
 	elif [ "$gotBetaDVR" = true ] ; then
-		echo ${DVR_PFX} "Beta version downloaded - will use this engine [$betaEngineVer]"
-		rm -f  ${DVRData}/${DVRBin}
-		mv ${DVRData}/${DVRBin}_beta ${DVRData}/${DVRBin}
+		echo ${DVR_PFX} "Beta version downloaded - check if [$betaEngineVer] newer than [$curEngineVer]"
+		if [ $betaEngineDate -gt $curEngineDate ]; then
+			echo ${DVR_PFX} "Beta version downloaded is newer date than existing engine - updating..."
+			rm -f  ${DVRData}/${DVRBin}
+			mv ${DVRData}/${DVRBin}_beta ${DVRData}/${DVRBin}
+		elif [ $betaEngineDate -eq $curEngineDate ] && [ $betaBeta -gt $curBeta ] ; then
+			echo ${DVR_PFX} "Beta version downloaded is newer beta than existing engine - updating..."
+			rm -f  ${DVRData}/${DVRBin}
+			mv ${DVRData}/${DVRBin}_beta ${DVRData}/${DVRBin}
+		else
+			echo ${DVR_PFX} "Beta version is not newer than existing engine - not updating"
+		fi
 	else # gotStableDVR = true && gotBetaDVR = false
-		echo ${DVR_PFX} "Stable version downloaded - will use this engine [$stableEngineVer]"
-		rm -f  ${DVRData}/${DVRBin}
-		mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
+		echo ${DVR_PFX} "Stable version downloaded - checking if engine [$stableEngineVer] newer than [$curEngineVer]"
+		if [ $stableEngineVer -gt $curEngineDate ]; then
+			echo ${DVR_PFX} "Stable version downloaded is newer than existing engine - updating..."
+			rm -f  ${DVRData}/${DVRBin}
+			mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
+		else
+			echo ${DVR_PFX} "Stable version downloaded is older than existing engine - not updating!"
+		fi
 	fi
 	rm ${DVRData}/${DVRBin}_beta
 	rm ${DVRData}/${DVRBin}_rel
