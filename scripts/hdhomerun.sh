@@ -68,40 +68,42 @@ update_engine()
 	echo ${DVR_PFX} "** Installing the HDHomeRunDVR Record Engine"
 	curEngineVer=`${DVRData}/${DVRBin} version | awk 'NR==1{print $4}'`
 	if [ ${#curEngineVer} -gt 8 ] ; then
-		curIsBeta = true
-		curBeta = ${curEngineVer:12:1}
-		curEngineDate = ${curEngineVer%b*}
+		curIsBeta=true
+		curBeta=${curEngineVer:12:1}
+		curEngineDate=${curEngineVer%b*}
 	else
-		curIsBeta = false
-		curBeta = 0
-		curEngineDate = ${curEngineVer}
+		curIsBeta=false
+		curBeta=0
+		curEngineDate=${curEngineVer}
 	fi
 
 	echo ${DVR_PFX} "** Current Engine Version is ${curEngineVer}"
 	stableEngineVer=""
 	betaEngineVer=""
-	gotStableDVR = false
-	gotBetaDVR = false
+	gotStableDVR=false
+	gotBetaDVR=false
 
 	echo ${DVR_PFX} "Downloading latest Stable release"
 	wget -qO ${DVRData}/${DVRBin}_rel ${DownloadURL}
 	if [ $# -ne 0 ] ; then
 		echo ${DVR_PFX} "ERROR in downloading latest Stable DVR binary [$#]"
 	else
-		stableEngineVer=`${DVRData}/${DVRBin}_rel version | awk 'NR==1{print $4}'`
-		gotStableDVR = true
+		stableEngineVer=`sh ${DVRData}/${DVRBin}_rel version | awk 'NR==1{print $4}'`
+		echo ${DVR_PFX} "Got Engine $stableEngineVer"
+		gotStableDVR=true
 	fi
 
 	if [ "$BetaEngine" -eq "1" ]; then
 		echo ${DVR_PFX} "Downloading latest Beta release"
-		wget -qO ${DVRData}/${DVRBin}_beta ${DownloadURL}
+		wget -qO ${DVRData}/${DVRBin}_beta ${BetaURL}
 		if [ $# -ne 0 ] ; then
 			echo ${DVR_PFX} "ERROR in downloading latest Beta DVR binary [$#]"
 		else
-			betaEngineVer=`${DVRData}/${DVRBin}_beta version | awk 'NR==1{print $4}'`
-			betaBeta = ${betaEngineVer:12:1}
-			betaEngineDate = ${betaEngineVer%b*}
-			gotBetaDVR = true
+			betaEngineVer=`sh ${DVRData}/${DVRBin}_beta version | awk 'NR==1{print $4}'`
+			betaBeta=${betaEngineVer:12:1}
+			betaEngineDate=${betaEngineVer%b*}
+			echo ${DVR_PFX} "Got Engine $betaEngineVer"
+			gotBetaDVR=true
 		fi
 	fi
 
@@ -128,7 +130,7 @@ update_engine()
 			rm -f  ${DVRData}/${DVRBin}
 			mv ${DVRData}/${DVRBin}_rel ${DVRData}/${DVRBin}
 		else
-			echo ${DVR_PFX} "Stable version downloaded is older than existing engine - not updating!"
+			echo ${DVR_PFX} "Stable version downloaded is older or same as existing engine - not updating!"
 		fi
 	fi
 	rm ${DVRData}/${DVRBin}_beta
