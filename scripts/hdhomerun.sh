@@ -66,20 +66,28 @@ validate_config_file()
 update_engine()
 {
 	echo ${DVR_PFX} "** Installing the HDHomeRunDVR Record Engine"
-	curEngineVer=`${DVRData}/${DVRBin} version | awk 'NR==1{print $4}'`
-	if [ ${#curEngineVer} -gt 8 ] ; then
-		curIsBeta=true
-		curBeta=${curEngineVer:12:1}
-		curEngineDate=${curEngineVer%b*}
+	if [ -f  ${DVRData}/${DVRBin} ] ; then
+		curEngineVer=`${DVRData}/${DVRBin} version | awk 'NR==1{print $4}'`
+		if [ ${#curEngineVer} -gt 8 ] ; then
+			curIsBeta=true
+			curBeta=${curEngineVer:12:1}
+			curEngineDate=${curEngineVer%b*}
+		else
+			curIsBeta=false
+			curBeta=0
+			curEngineDate=${curEngineVer}
+		fi
 	else
-		curIsBeta=false
-		curBeta=0
-		curEngineDate=${curEngineVer}
+			curEngineVer=0
+			curIsBeta=false
+			curBeta=0
+			curEngineDate=${curEngineVer}
 	fi
 
 	echo ${DVR_PFX} "** Current Engine Version is ${curEngineVer}"
 	stableEngineVer=""
 	betaEngineVer=""
+	betaBeta=0
 	gotStableDVR=false
 	gotBetaDVR=false
 
@@ -100,9 +108,13 @@ update_engine()
 			echo ${DVR_PFX} "ERROR in downloading latest Beta DVR binary [$#]"
 		else
 			betaEngineVer=`sh ${DVRData}/${DVRBin}_beta version | awk 'NR==1{print $4}'`
-			betaBeta=${betaEngineVer:12:1}
+			if [ "$betaEngineVer" == *"beta"* ] ; then
+				betaBeta=${betaEngineVer:12:1}
+			else
+				betaBeta=0
+			fi
 			betaEngineDate=${betaEngineVer%b*}
-			echo ${DVR_PFX} "Got Engine $betaEngineVer"
+			echo ${DVR_PFX} "Got Engine $betaEngineVer [$betaBeta]"
 			gotBetaDVR=true
 		fi
 	fi
@@ -179,6 +191,8 @@ start_engine()
 ###########################
 # Main loop
 #
+echo "**********************"
+echo "hdhomerun.sh"
 validate_config_file
 update_engine
 start_engine

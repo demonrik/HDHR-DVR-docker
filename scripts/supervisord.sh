@@ -132,7 +132,7 @@ create_dvr_user() {
 
     echo "INFO: Creating Group dvr with GID [${PGID}]"
     ${CMD_ADDGROUP} -og ${PGID} ${DVR_GRP}
-    resp = $?
+    resp=$?
     if [ $resp -ne 0 ]; then
         echo "WARN: Creating group with GID [${PGID}] FAILED - sticking with ${currgrp}"
         echo "INFO: Response was" $resp
@@ -144,7 +144,7 @@ create_dvr_user() {
 
     echo "INFO: Creating User dvr with UID [${PUID}]"
     ${CMD_ADDUSER} -Mg $realgrp -ou ${PUID} ${DVR_USR}
-    resp = $?
+    resp=$?
     if [ $resp -ne 0 ]; then
         echo "ERROR: Creating user with UID [${PUID}] FAILED"
     else
@@ -239,11 +239,12 @@ start_supervisord() {
 
 # Main Loop
 CNTR_VER=`cat /HDHomeRunDVR/VERSION`
+CNTR_MARCH=`uname -m`
 echo ""
 echo "************************************************"
 echo ""
 echo "           Starting DVR Container"
-echo "           VERSION: ${CNTR_VER}"
+echo "           VERSION: ${CNTR_VER} [${CNTR_MARCH}]" 
 echo ""
 echo "************************************************"
 echo ""
